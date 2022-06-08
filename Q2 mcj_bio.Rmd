@@ -1,0 +1,108 @@
+---
+title: "R Notebook"
+output: 
+  html_notebook: 
+    fig_caption: yes
+---
+
+2.	Body measurement
+
+Adapt some code from the Physio_dash.R shiny app to create a function and code that allows you to create some breathing rate simulated data. Then adapt some more code again  from the Physio_dash.R shiny app, using the dygraphs and xts packages, to create a script that plots a dygraph plot and print the dygraph plot of the simulated data.
+
+Write the simulated data to a datafile so that it can be used to check the graph.
+
+Submit an R script with the code you used, a pdf of the plot and the datafile of your simulated data.
+
+```{r}
+library(dygraphs)
+library(tidyverse)
+library(dplyr)
+library(xts)
+```
+
+#ADAPTED CODE:
+
+  data_HR_sim <- eventReactive(input$simulate_data,{
+    time <- seq(t_start, t_start+(input$duration*60000), by = 500)
+    Heartrate <- as.numeric(arima.sim(model = list(ar = input$autocorrelation) , n = length(time), mean = 8, sd = 5))
+    data.frame(time,Heartrate)
+  })
+  
+
+    
+    
+#Creating a function
+```{r}
+sim_data <- function(
+  t_start,
+  duration,
+  autocorrelation
+){
+  time <- seq(t_start, t_start+(duration*60000), by = 1500)
+  Breathing_Rate <- as.numeric(arima.sim(model = list(ar = autocorrelation) , n = length(time), mean = 4, sd = 5))
+  Breathing_Rate<- abs(Breathing_Rate)
+  Breathing_Rate<- data.frame(time,Breathing_Rate)
+  return(Breathing_Rate)
+}
+```
+
+
+Simulate some data
+```{r}
+df<-sim_data(1500000000000,1,0.5)
+df
+
+```
+ 
+#Writing the data as a csv file  
+```{r}
+write.csv(df,"C:/Users/Jidhin/Desktop/Q2_breathing_sim_data.csv")
+
+```
+
+#ADAPTED CODE: 
+  output$plot_HR <- renderDygraph({
+    HR_xts <- xts(x = data_HR()$value, order.by = data_HR()$time_date) # specific dataframe with time series class
+    dygraph(HR_xts, main = " ", ylab = "Heart Rate (bpm)", xlab = "time", group = "biometrics")%>%
+        dySeries("V1", label = "Heart Rate (bpm)") %>%
+        dyRangeSelector(height = 20) %>%
+        dyOptions(colors = 'red') %>%
+        dyUnzoom() %>%
+        dyLegend(width = 300)
+  })
+  
+```{r}
+data <- df
+data <- data %>%
+  dplyr::select(time,Breathing_Rate) %>%
+  dplyr::mutate(biometric = "BR") %>%
+  dplyr::rename(value = Breathing_Rate) %>%
+  dplyr::mutate(time_date = as.POSIXct(as.numeric(as.character(time))/1000, origin = "1970-01-01", tz="Europe/London"))
+data
+```
+  
+#Plot#
+
+HR_xts <- xts(x = data_HR()$value, order.by = data_HR()$time_date) # specific dataframe with time series class
+    dygraph(HR_xts, main = " ", ylab = "Heart Rate (bpm)", xlab = "time", group = "biometrics")%>%
+        dySeries("V1", label = "Heart Rate (bpm)") %>%
+        dyRangeSelector(height = 20) %>%
+        dyOptions(colors = 'red') %>%
+        dyUnzoom() %>%
+        dyLegend(width = 300)
+        
+```{r}
+BR_xts <- xts(x = data$value, order.by = data$time_date)
+ dygraph(data, main = " ", ylab = "Breathing Rate (bpm)", xlab = "time", group = "biometrics")%>%
+        dySeries("value", label = "Breathing Rate (rpm)") %>%
+        dyRangeSelector(height = 20) %>%
+        dyOptions(colors = 'BLUE') %>%
+        dyUnzoom() %>%
+        dyLegend(width = 300)
+
+
+
+```
+
+   
+    

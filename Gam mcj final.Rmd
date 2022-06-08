@@ -1,0 +1,114 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+3.	Statistical modelling
+
+Using the mgcv package take the simulated breathing rate data and create a linear model and a GAM model using the lm() command and the gam() command respectively (the gam command is part of the mgcv package). Report the summary output of the lm and gam models
+
+Submit an R script with the code you used and with the reported statistics in the comments at the end of the script.
+
+#Importing Libraries
+```{r}
+library(mgcv)
+library(tidyverse)
+library(dplyr)
+```
+
+#Load dataset
+```{r}
+data<- read.csv("/Users/martinchristy/Desktop/BA model prac/Simulated_Data.csv")
+data
+data1<- data %>%
+  select(c(time,value)) 
+  
+data1
+```
+
+#Creating Linear Model lm_mode
+```{r}
+lm_model <- lm(value ~ time, data = data1) 
+#Value is the response variable and time is the predictor variable from the dataset data1
+summary(lm_model)
+
+```
+
+#For further analysis the residual graph is plotted
+```{r}
+data1$predicted <- predict(lm_model)   # Save the predicted values
+data1$residuals <- residuals(lm_model) # Save the residual values
+
+ggplot(data=data1, aes(x=time, y=value)) + 
+  geom_point() + 
+  geom_point(colour = "red") +
+  geom_smooth(method = "lm", se = FALSE, size = 1) +
+  geom_point(aes(y = predicted), shape = 1) +
+  geom_segment(aes(xend = time, yend = predicted), alpha = .5) +
+  geom_text(aes(y = predicted+(residuals/2), label = paste0("", round(residuals, 1), "")), size=2.5)
+
+  print(sum(data1$residuals^2)) # the sum of squares of the residuals 
+  summary(lm_model)
+  #anova(lm_model)
+```
+#The sum of squares of residuals is 9875.075.
+It is  not a good value and it can be said that the linear regression model could not approximate the data efficiently.
+
+#Using GAMs for better results
+
+```{r}
+gam_model <- gam(value ~ s(time,k=9), data = data1, method = "REML")
+#GAM contains an s() function(smooth function) around the predictor variable. This s() means spline which is the combination of the basis functions.
+#k - No of basis functions
+#method=REML - Restricted maximum Likelihood is used so that the appropriate smoothing parameter(sp) is chosen by the mgcv package itself 
+summary(gam_model)
+```
+
+#The p value = <2e-16 is very low.
+The low p value indicates that the  k is too low, and  effective degrees of freedom (edf) is close to k.
+EDF defines the complexity of the model.An EDF of 1 or close to 1 represents a linear model. Further from 1 means it is a more complex model.
+
+#Further analysis
+```{r}
+gam.check(gam_model,pages=1)
+```
+#The p value is low
+
+```{r}
+plot(gam_model, residuals = TRUE, se=TRUE, rug=FALSE, pch = 1, cex = 0.5, shade = TRUE, shade.col = "rosybrown2")
+#residuals=TRUE - include the data points of the residuals
+#se=FALSE -turns on the variability bands
+#pch - shape of points
+#cex -size of points
+```
+#Plotting residual graph
+```{r}
+data1$predicted <- predict(gam_model)   # Save the predicted values
+data1$residuals <- residuals(gam_model) # Save the residual values
+
+ggplot(data=data1, aes(x=time, y=value)) + 
+  geom_point() + 
+  geom_point(colour = "green") +
+  #geom_smooth(method = "lm", se = FALSE, size = 1) +
+  geom_path(aes(x=time, y=predicted), colour = "blue") +
+  geom_point(aes(y = predicted), shape = 1) +
+  geom_segment(aes(xend = time, yend = predicted), alpha = .5) +
+  geom_text(aes(y = predicted+(residuals/2), label = paste0("", round(residuals, 1), "")), size=2.5)
+  print(sum(data1$residuals^2)) #Sum of squares of residuals
+```
+#The sum of squares of residuals is 4702.765
+It can be clearly seen that the sum of squares of residuals of the linear model(9875.075) was decreased when gam model(4702.765) was applied. So gam model was able to approximate the non linear data better than linear model.
+
+#Comparison plot of linear and gam model
+```{r}
+ggplot(data=data1, aes(x=time, y=value)) + 
+  geom_point() + 
+  geom_point(colour = "red") +
+  geom_smooth(method = "lm", se = FALSE, size = 1) +
+  geom_path(aes(x=time, y=predicted), colour = "blue") +
+  geom_point(aes(y = predicted), shape = 1) +
+  geom_segment(aes(xend = time, yend = predicted), alpha = .5) +
+  geom_text(aes(y = predicted+(residuals/2), label = paste0("", round(residuals, 1), "")), size=2.5)
+```
+
+#The blue line indicares the linear regression line produced by the linear model .

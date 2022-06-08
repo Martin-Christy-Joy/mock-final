@@ -1,0 +1,114 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+2.	Body measurement
+
+Adapt some code from the Physio_dash.R shiny app to create a function and code that allows you to create some breathing rate simulated data. Then adapt some more code again  from the Physio_dash.R shiny app, using the dygraphs and xts packages, to create a script that plots a dygraph plot and print the dygraph plot of the simulated data.
+
+Write the simulated data to a datafile so that it can be used to check the graph.
+
+Submit an R script with the code you used, a pdf of the plot and the datafile of your simulated data.
+
+#Loading required libraries
+```{r}
+library(tidyverse)
+library(dygraphs)
+library(xts)
+```
+
+#ADAPTED CODE:
+  data_HR_sim <- eventReactive(input$simulate_data,{
+    time <- seq(t_start, t_start+(input$duration*60000), by = 500)
+    Heartrate <- as.numeric(arima.sim(model = list(ar = input$autocorrelation) , n = length(time), mean = 8, sd = 5))
+    data.frame(time,Heartrate)
+
+BR by = 1500, mean = 4, sd = 5, variable name = Breathing.Rate
+#Creating a function to simulate data
+
+The function has parameters of  t_start, duration and autocorrelation. The time variable generates the time from the the starting point(t_start) to the present time. 
+```{r}
+simulate_ft<- function(
+    t_start,
+    duration,
+    autocorrelation
+){
+  #creates a vector that runs from 0  with 1500 increments. This is the time sequence for our simulation data.
+  time <- seq(t_start, t_start+(duration*60000), by = 1500)
+  
+  Breathing_Rate <- as.numeric(arima.sim(model = list(ar =autocorrelation) , n = length(time), mean = 4, sd = 5))
+#The  value for the Breathing_Rate is obtained using the arima(AutoRegressive Integrated Moving Average) function that takes in a input of AR and MA coefficients as a list [model = list(ar = autocorrelation)] and we also define the length of the output series as the length of the time generated(n = length(time)) with a mean of 4 and standard deviation of 5(-Physio_dash.R )
+  
+  Breathing_Rate<- abs(Breathing_Rate) #As there should be no negative values in breathing, taking the absolute value
+  Breathing_Rate<- data.frame(time,Breathing_Rate) #creates a data frame of time and Breathing_Rate as the output
+  return(Breathing_Rate) #Return resulting data as output of function
+}
+```
+
+#Simulating data using the function
+The values for the t_start,duration and autocorrelation are passed to the function to generate the Breathing_Rate
+
+t_start=0
+duration=4
+autocorrelation=0.8
+```{r}
+
+sim_data<-simulate_ft(0,4,0.8)
+sim_data #Creating
+```
+
+#ADAPTING CODE FOR PLOTTING
+  data_HR <- reactive({
+    if (!is.null(data_HR_sim())){
+      data <- data_HR_sim()
+    }  
+    data <- data %>%
+      dplyr::select(time,Heartrate) %>%
+      dplyr::mutate(biometric = "HR") %>%
+      dplyr::rename(value = Heartrate) %>%
+      dplyr::mutate(time_date = as.POSIXct(as.numeric(as.character(time))/1000, origin = "1970-01-01", tz="Europe/London"))
+    return(data)
+  })
+  
+  output$plot_HR <- renderDygraph({
+    HR_xts <- xts(x = data_HR()$value, order.by = data_HR()$time_date) # specific dataframe with time series class
+    dygraph(HR_xts, main = " ", ylab = "Heart Rate (bpm)", xlab = "time", group = "biometrics")%>%
+        dySeries("V1", label = "Heart Rate (bpm)") %>%
+        dyRangeSelector(height = 20) %>%
+        dyOptions(colors = 'red') %>%
+        dyUnzoom() %>%
+        dyLegend(width = 300)
+  })
+```{r}
+plot_data <- sim_data %>%
+      dplyr::select(time,Breathing_Rate) %>%
+      dplyr::mutate(biometric = "BR") %>%
+      dplyr::rename(value = Breathing_Rate) %>%
+      dplyr::mutate(time_date = as.POSIXct(as.numeric(as.character(time))/1000, origin = "1970-01-01", tz="Europe/London"))
+plot_data
+
+#WRANGLING DATA. 
+#Data wrangling is done using the dplyr package . It takes the data provided by plot_data and changes it to create a data frame with four variables time, value, biometric, and time_date. It retains the original numeric time data as time, changes the breathing rate variable to value and gives it a label of BR in another variable. Finally the last line of wrangling code creates a POSIX compatible time variable using the mutate command.
+```
+
+#Writing the data into a csv file
+
+```{r}
+write.csv(plot_data,"/Users/martinchristy/Desktop/BA model prac/Simulated_Data.csv")
+```
+
+#Plotting 
+```{r}
+BR_xts <- xts(x = plot_data$value, order.by = plot_data$time_date) # specific dataframe with time series class
+#
+ dygraph(plot_data, main = " ", ylab = "Breathing Rate (rpm)", xlab = "time", group = "biometrics")%>%
+   dySeries("value", label = "Breathing Rate (rpm)") %>%
+   dyRangeSelector(height = 20) %>%
+   dyOptions(colors = 'BLUE') %>%     
+   dyUnzoom() %>%     
+   dyLegend(width = 300)    
+```
+
+
+

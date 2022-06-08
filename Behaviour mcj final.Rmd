@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+1.	Behavioural Measurement Data Wrangling and reliability.
+
+Some psychologists have used a coding scheme to assess the level of expressivity in people and they want to know if raters can reliably follow the scheme. Load in the Example Data and decide whether Krippendorf’s alpha or Intra-class Correlation is the more appropriate statistic to use. The irr package help file, the Hallgren (2012) and the Shrout and Fleiss (1979) journal articles should help you in making these decisions. Then wrangle the data into the appropriate form and report either Krippendorf’s alpha or your chosen icc statistics summary – if you choose icc say why you made the choices you did. Upload the R script you used to wrangle the data and the output from your chosen statistic to QOL.
+
+The data can be found in the ExampleData1.csv file.
+
+
+Loading required libraries
+```{r}
+library(irr)
+library(tidyverse)
+
+```
+
+#Loading dataset
+```{r}
+df<- read.csv("/Users/martinchristy/Desktop/BA model prac/ExampleData1-3.csv")
+df
+```
+#Understanding the data
+
+#-Data is continous data
+```{r}
+#Checking for null values
+sum(is.na(df)) #No null values
+#Checking number of raters and subjects
+unique(df$Subject) #There are 12 subjects
+unique(df$Rater) #There are 5 raters
+
+#Collecting additional info of the dataset
+str(df)
+```
+
+#Data wrangling to form a tablular structure for futher analysis
+```{r}
+df2<- df%>% spread(Rater, Expressivity)
+df2
+```
+#Data is wrangled to a form in tabular form which ratings for all 5 raters for all subjects are tabulated.
+
+#Dropping unwanted column (Subject)
+```{r}
+df2<- df2%>%
+  select(-Subject)
+df2
+```
+#For further insights data is summarised - per-rater summary statistics
+```{r}
+summary(df2)
+```
+
+#From the summary we can see, there are no null/NA values. Raters are not in perfect agreement in their individual ratings. Especially rater4 have significant difference in values.
+
+#Choosing the best IRR approach.
+
+SInce the data is continous with no null values and have more than 2 raters, ICC is appropriate. Krippendorf's alpha is not flexible as ICC for continous data.
+
+#Four decisions need to be made before running an ICC:[-Hallgren]
+1.Which model: One-way or Two-way?
+#Two way
+As we do not have enough evidence to state it is one way, eventhough, as data is fully crossed, we assume that the raters and subjects were selected not randomly.
+
+2.Absolute agreement or consistency?
+#Consistency
+As raters are not in perfect agreement(different ranges) in terms of their ratings, Consistency is chosen over agreement.
+
+3.Unit of Analysis:Average-measures or Single-measures? 
+#Average
+As all subjects are coded by all raters, average-measures ICCs are appropriate as data is fully crossed.
+
+4.Random or fixed effects?
+#Mixed effects
+Assuming raters are fixed
+
+#Model: Two way
+#Type: Consistency
+#Unit : Average
+
+#ICC(C,5) can be implemented for this case.
+```{r}
+icc(df2,model="twoway",type="consistency",unit="average")
+```
+
+#The ICC score is 0.445 which shows a moderate agreement between the raters.
+ Its confidence interval is given by, -0.277 < ICC < 0.818
+ 
+ 95% confident interval of an ICC estimate is -0.277 < ICC < 0.818; the level of reliability should be regarded as “poor” to "good" because in the worst case scenario, the true ICC is  -0.277 which is poor. So as a whole it can be considered as moderate.
+ #[-Hallgren]
+ 
+#Krippenforf's alpha can also be used in this case but is not as much as flexible as ICCs for continous data
+```{r}
+kripp.alpha(as.matrix(df2),"interval")
+```
+
