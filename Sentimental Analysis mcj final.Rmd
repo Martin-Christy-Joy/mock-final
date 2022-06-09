@@ -1,0 +1,61 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+4.	Sentiment Analysis
+
+The TweetCorpusPolarity.csv file contains nearly 6000 tweets. About half of these tweets have been given a polarity rating of positive and the other half negative. Using the Warriner ratings in the Ratings_WarrinerVAD.csv file and the TweetCorpusPolarity.csv file based on the in class exercise produce a ggplot of each of the valence, arousal and dominance dimensions from the WarrinerVAD file. How do these relate to the polarity? Submit the code you created to achieve this as well as a image file of the plot. 
+
+#Loading libraries
+```{r}
+library(tidyverse)
+```
+
+#Reading datasets
+```{r}
+tweet_df<- read.csv("/Users/martinchristy/Desktop/BA model prac/TweetCorpusPolarity.csv")
+tweet_df
+```
+```{r}
+ratings_df<- read.csv("/Users/martinchristy/Desktop/BA model prac/Ratings_WarrinerVAD.csv")
+ratings_df
+```
+
+#Converting the Tweet column which constist of Tweet sentences into individual words and saving as a new column
+```{r}
+words_df<- tweet_df%>% unnest_tokens("word","Tweet")
+words_df
+```
+#Finding the corresponding values for valence, arousal and dominance of the words from tweet by inner joining with the Ratings_WarrinerVAD.csv 
+
+```{r}
+joined<- inner_join(words_df,ratings_df,by="word")
+joined
+```
+#The corresponding scores for all words in tweet is obtained
+
+
+#The data is summarised based on valence, arousal and dominance for positive and negative polarities.
+```{r}
+out_df<- joined %>%
+  group_by(Polarity) %>%
+  summarise(
+    valence=mean(Valence),
+    arousal=mean(Arousal),
+    dominance=mean(Dominance)
+  )
+out_df
+```
+#Rearranging the dataframe for tabulating valence, arousal, dominance for each polarity
+```{r}
+final_df<- out_df %>% gather("Dimension","Mean",2:4)
+final_df
+```
+#Plotting the graph
+```{r}
+ggplot(final_df, aes(x=Dimension, y=Mean))+
+  geom_bar(stat = "identity", aes(fill = Dimension))+
+  facet_wrap(~Polarity)
+```
+#The facet graph based on polarity for both positive and negative polarities are plotted. The dominance and valence of Positive polarity is slightly higher than that of negative.
